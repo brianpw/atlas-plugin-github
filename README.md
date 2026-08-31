@@ -37,7 +37,7 @@ and Atlas draws the shape without knowing what the value means.
 
 | Column   | Heading  | Kind     | What Atlas draws                   |
 | -------- | -------- | -------- | ---------------------------------- |
-| `number` | `Number` | `number` | a whole number                     |
+| `number` | `Issue`  | `number` | a whole number                     |
 | `title`  | `Title`  | `text`   | a line of text                     |
 | `labels` | `Labels` | `texts`  | a list of short texts, or none     |
 | `state`  | `State`  | `choice` | `open` or `closed`, under a heading |

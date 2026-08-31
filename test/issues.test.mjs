@@ -235,7 +235,7 @@ test('the columns are declared in the order the row draws them', async () => {
   );
   assert.deepEqual(
     rowListOf(screen).columns.map((one) => one.named),
-    ['Number', 'Title', 'Labels', 'State'],
+    ['Issue', 'Title', 'Labels', 'State'],
   );
 });
 

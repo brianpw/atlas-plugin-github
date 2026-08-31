@@ -42,7 +42,7 @@
             "columns": [
               {
                 "column": "number",
-                "named": "Number",
+                "named": "Issue",
                 "kind": "number",
                 "opensAt": "https://github.com/{owner}/{repository}/issues/{value}"
               },
