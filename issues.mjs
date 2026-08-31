@@ -35,18 +35,27 @@
  * spending somebody's rate limit on a decision nobody agreed to.
  */
 export async function listIssues({ atlas, filters, after }) {
-  // **Fifty, and the reason travels with the number.** A screenful of issues is
-  // tens rather than hundreds. A hundred — the most GitHub gives — makes every
-  // call carry twice what anybody reads and makes the paging ceiling twice as
-  // coarse. GitHub's own default of thirty is a number GitHub chose for its own
-  // reasons and would change without telling anybody. A number moved without its
-  // reason is a number the next person changes to a hundred.
+  // **Ten, and the reason travels with the number.** The number that matters is
+  // not how many issues read well on a screen — it is how many fit through the
+  // channel Atlas carries the answer across. That channel takes about 258,000
+  // characters. Fifty issues from a real repository measured 380,920, so fifty
+  // never arrived at all: Atlas fetched them, could not hand them over, and this
+  // plugin waited for an answer that was never coming until the deadline killed
+  // it.
   //
-  // **A page may hold fewer than fifty and still not be the end of the list**,
+  // **The arithmetic, so the next person does not have to redo it.** That
+  // measurement is about 7,600 characters an issue, which puts the ceiling near
+  // thirty-three with no margin at all — and an issue's size varies by an order
+  // of magnitude, because a body is whatever somebody typed. Ten is about 76,000
+  // characters, three times under the limit, and still more rows than fit on a
+  // screen. **Anything above about twenty is a number that works until somebody
+  // writes a long issue.**
+  //
+  // **A page may hold fewer than ten and still not be the end of the list**,
   // because the pull requests below are dropped after GitHub has counted them.
   // A short page is not the last page, and what says whether there is more is
   // the continuation Atlas hands back, never the number of rows.
-  const perPage = 50;
+  const perPage = 10;
 
   const asked = filters ?? {};
   const values = {

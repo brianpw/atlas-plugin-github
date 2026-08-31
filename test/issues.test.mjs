@@ -235,13 +235,13 @@ test('one call to the plugin makes one call to the host, under the declared name
 test('it fills state and per_page, and leaves labels off where there are none', async () => {
   const atlas = fakeAtlas({ body: [], after: null });
   await listIssues({ atlas: atlas.handle, filters: { state: 'closed', labels: [] }, after: null });
-  assert.deepEqual(atlas.sent[0].values, { state: 'closed', per_page: 50 });
+  assert.deepEqual(atlas.sent[0].values, { state: 'closed', per_page: 10 });
 });
 
-test('fifty is what it asks for', async () => {
+test('ten is what it asks for, because that is what fits through the channel', async () => {
   const atlas = fakeAtlas({ body: [], after: null });
   await listIssues({ atlas: atlas.handle, filters: { state: 'all', labels: [] }, after: null });
-  assert.equal(atlas.sent[0].values.per_page, 50);
+  assert.equal(atlas.sent[0].values.per_page, 10);
 });
 
 test('labels are one value, joined, never a second parameter', async () => {
@@ -253,7 +253,7 @@ test('labels are one value, joined, never a second parameter', async () => {
   });
   assert.deepEqual(atlas.sent[0].values, {
     state: 'open',
-    per_page: 50,
+    per_page: 10,
     labels: 'bug,x&state=all',
   });
   assert.equal(Object.keys(atlas.sent[0].values).length, 3);
