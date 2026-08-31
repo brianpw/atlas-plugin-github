@@ -57,6 +57,12 @@ export async function listIssues({ atlas, filters, after }) {
   // the continuation Atlas hands back, never the number of rows.
   const perPage = 10;
 
+  // **Every filter arrives as text**, one value per filter this plugin's screen
+  // declared, under the name it declared. That is Atlas handing over what a
+  // person chose or typed and nothing more: it checked that a chosen value is
+  // one the choice offers, and it knows nothing at all about what any of them
+  // means. **What a comma in a typed one means is this file's decision**, and
+  // `labelsAsked` below is where it is made.
   const asked = filters ?? {};
   const values = {
     // **The default is sent rather than left off.** A parameter omitted is a
@@ -65,7 +71,7 @@ export async function listIssues({ atlas, filters, after }) {
     state: typeof asked.state === 'string' && asked.state !== '' ? asked.state : 'open',
     per_page: perPage,
   };
-  const labels = Array.isArray(asked.labels) ? asked.labels : [];
+  const labels = labelsAsked(asked.labels);
   if (labels.length > 0) {
     // Joined into one value, never into a name. Atlas builds the query through
     // `URLSearchParams`, so a label called `x&state=all` is one label with an odd
@@ -91,6 +97,49 @@ export async function listIssues({ atlas, filters, after }) {
   }
 
   return { rows: rowsFrom(answered.body), after: answered.after ?? null };
+}
+
+/**
+ * The label names in what somebody typed into the Labels field.
+ *
+ * **The field is one line of text and the plugin decides what it means.** Atlas
+ * declines to have an opinion — it hands over the characters as typed and says
+ * nothing under the field about what a comma would do — so the reading is here,
+ * with its reason, rather than anywhere it could be assumed.
+ *
+ * **The separator is a comma because GitHub's own `labels` parameter is a
+ * comma-separated list.** This is not a syntax this plugin invented; it is the
+ * one already on the other end, passed through. Anything else would be a second
+ * spelling for the same thing, and the person typing it would have to know which
+ * of the two they were writing in.
+ *
+ * **A label whose name contains a comma cannot be asked for here, and that is
+ * GitHub's limit rather than this plugin's choice.** GitHub allows a comma in a
+ * label name and offers no escape for one in the parameter, so every possible
+ * spelling of such a name arrives there as two names. An escape invented on this
+ * side would be undone one line later, when the pieces are joined back into the
+ * one value GitHub takes — so the split is the honest one, and the trade is
+ * stated rather than hidden: that label is out of reach of this filter, while
+ * still being drawn in the Labels column of every row that carries it.
+ *
+ * **Each name is trimmed, and empties are dropped**, so that `bug, agent` — which
+ * is how a person writes a list — asks for two labels rather than for one called
+ * ` agent`, and a trailing comma asks for nothing extra. A label whose name
+ * begins or ends with a space is out of reach for the same reason and by the same
+ * trade.
+ *
+ * **Anything that is not text is nothing.** Every filter arrives as text, so this
+ * cannot happen through Atlas; answering with none rather than throwing keeps a
+ * shape nobody sends from being the thing that fails a screen.
+ */
+export function labelsAsked(typed) {
+  if (typeof typed !== 'string') {
+    return [];
+  }
+  return typed
+    .split(',')
+    .map((one) => one.trim())
+    .filter((one) => one !== '');
 }
 
 /**
@@ -139,6 +188,12 @@ export function rowsFrom(body) {
  * answer with it. What reaches a person is Atlas's own sentence for a screen
  * whose plugin did not answer — nothing written here is ever drawn.
  *
+ * **The two states are the two values the state column declares**, and they are
+ * checked here as well as by Atlas on the way back. That is not a duplicate: the
+ * manifest says what a person may see, this says what this plugin will vouch
+ * for, and a `merged` arriving from somewhere is a thing whose meaning this file
+ * is the only one that could have.
+ *
  * **The labels are sorted.** GitHub's order is its own and is documented as
  * nothing, so two issues carrying the same two labels would otherwise read
  * differently on one row and on the next, which reads as a bug rather than as an
@@ -157,7 +212,10 @@ export function rowFrom(issue) {
   if (state !== 'open' && state !== 'closed') {
     throw new Error('An issue arrived in a state this plugin has no word for.');
   }
-  return { number, title, state, labels: labelsFrom(issue.labels) };
+  // Written in the order the screen declares them, which is the order they are
+  // drawn in. Atlas reads a row by name rather than by position, so this is for
+  // whoever is reading the two files side by side.
+  return { number, title, labels: labelsFrom(issue.labels), state };
 }
 
 /**
