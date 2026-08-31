@@ -20,8 +20,45 @@
         "under": "repository",
         "rows": "listIssues",
         "holds": [
-          { "component": "filterBar", "filters": ["state", "labels"] },
-          { "component": "rowList", "columns": ["number", "title", "state", "labels"] }
+          {
+            "component": "filterBar",
+            "filters": [
+              {
+                "filter": "state",
+                "named": "State",
+                "kind": "choice",
+                "values": [
+                  { "value": "open", "named": "Open" },
+                  { "value": "closed", "named": "Closed" },
+                  { "value": "all", "named": "All" }
+                ],
+                "byDefault": "open"
+              },
+              { "filter": "labels", "named": "Labels", "kind": "text" }
+            ]
+          },
+          {
+            "component": "rowList",
+            "columns": [
+              {
+                "column": "number",
+                "named": "Issue",
+                "kind": "number",
+                "opensAt": "https://github.com/{owner}/{repository}/issues/{value}"
+              },
+              { "column": "title", "named": "Title", "kind": "text" },
+              { "column": "labels", "named": "Labels", "kind": "texts" },
+              {
+                "column": "state",
+                "named": "State",
+                "kind": "choice",
+                "values": [
+                  { "value": "open", "named": "Open" },
+                  { "value": "closed", "named": "Closed" }
+                ]
+              }
+            ]
+          }
         ]
       }
     ]

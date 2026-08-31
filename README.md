@@ -28,15 +28,72 @@ own words on the consent screen, attaches the token of the connection the
 repository points at, sends it, redacts what comes back, and hands over the
 answer. **The plugin never holds the token and never learns the address.**
 
-**One screen.** `Issues`, under a repository, listing four columns — number,
-title, state and labels — and filtering by state and by labels. Atlas draws it;
-this plugin ships no interface code, because it cannot.
+**One screen.** `Issues`, under a repository. Atlas draws it; this plugin ships
+no interface code, because it cannot.
+
+**Four columns, and each of them is a declaration rather than a name.** A column
+says what it is called, the heading a person reads, and what shape its value is —
+and Atlas draws the shape without knowing what the value means.
+
+| Column   | Heading  | Kind     | What Atlas draws                   |
+| -------- | -------- | -------- | ---------------------------------- |
+| `number` | `Issue`  | `number` | a whole number                     |
+| `title`  | `Title`  | `text`   | a line of text                     |
+| `labels` | `Labels` | `texts`  | a list of short texts, or none     |
+| `state`  | `State`  | `choice` | `open` or `closed`, under a heading |
+
+**That order is not cosmetic.** Declaration order is slot order: the first column
+is drawn leftmost and the fourth last, which is what puts the number in front of
+the title, the labels after it and the state marker at the end. A fifth column
+would refuse the plugin at load, because the row Atlas draws has four value slots.
+
+**The number opens the issue on GitHub, and it is the only column that does.** It
+declares the address as a template —
+`https://github.com/{owner}/{repository}/issues/{value}` — and every part of it
+that identifies a repository or an issue is a placeholder. Atlas checks the
+template at load, fills `{owner}` and `{repository}` from the repository's own
+record and `{value}` from the row, percent-encodes all three, and checks where the
+row is drawn that the template points at the host the repository is actually on.
+**This plugin declares where on a host a row opens, never which host, and it never
+writes an address.** A row with two ways out would be one a person has to choose
+between for no reason, so no other column declares one.
+
+**Two filters.** `state` is a choice of `open`, `closed` and `all`, headed `Open`,
+`Closed` and `All`, and a read starts at `open`. The values are GitHub's own
+words, kept as GitHub writes them so that anybody reading GitHub's documentation
+finds the same word; the headings are English for a person. `labels` is a line of
+text, because nothing here lists what a repository's labels could be — a control
+offering a set would need a call nobody declared, or would offer only what is
+already on screen.
+
+**`open`, `closed` and `all` are this plugin's words, and Atlas holds none of
+them.** So is every heading above. That is the whole of what a declaration is for:
+a plugin for a host that calls its states something else declares its own, and
+Atlas draws that screen just as readily.
 
 **No verb.** `requires` is absent. A verb is something Atlas does out of its own
 knowledge, and this plugin needs none: everything it does is the one declared
 call.
 
 ## What it does with the answer
+
+**Every filter arrives as one line of text**, one value for every filter the
+screen declared, under the name it declared: what a person chose, or what they
+typed. Atlas has checked that a chosen value is one the choice offers and knows
+nothing else about any of them — **what a comma in a typed one means is this
+plugin's decision**, and it is made in `labelsAsked`.
+
+The Labels field is split on the comma, each name trimmed, and the empties
+dropped. **The separator is a comma because GitHub's own `labels` parameter is a
+comma-separated list**; this is not a syntax the plugin invented, it is the one
+already on the other end, passed through. **A label whose own name contains a
+comma therefore cannot be asked for, and the limit is GitHub's rather than this
+plugin's**: GitHub allows a comma in a label name and offers no escape for one in
+the parameter, so every spelling of such a name arrives there as two. An escape
+invented on this side would be undone one line later, when the pieces are joined
+back into the single value GitHub takes. The trade is stated rather than hidden —
+that label is out of reach of the filter, and is still drawn in the Labels column
+of every row that carries it.
 
 Atlas hands back GitHub's own answer, parsed and redacted, with an opaque
 continuation beside it. This plugin:
@@ -54,10 +111,13 @@ continuation beside it. This plugin:
 - **fails the whole answer on an item it cannot read** — a missing number, a
   missing title, a state it has no word for — rather than returning a shorter
   list. A list with the bad rows quietly dropped looks complete and is not.
-- **asks for fifty at a time**, because a screenful of issues is tens rather than
-  hundreds. A hundred is twice what anybody reads and makes Atlas's paging ceiling
-  twice as coarse; GitHub's own thirty is a number GitHub chose for its own
-  reasons and would change without telling anybody.
+- **asks for ten at a time**, because ten is what fits through the channel Atlas
+  carries the answer across. That channel takes about 258,000 characters; fifty
+  issues from a real repository measured 380,920, so fifty never arrived at all.
+  At about 7,600 characters an issue the hard ceiling is near thirty-three with no
+  margin, and an issue's size varies by an order of magnitude because a body is
+  whatever somebody typed. Ten is about 76,000 characters, three times under, and
+  still more rows than fit on a screen.
 - **makes one call per page, holds nothing between calls, and never retries.** A
   failed call is one of Atlas's eight named answers, and a plugin deciding to try
   again would be a plugin spending somebody's rate limit on a decision nobody
@@ -114,7 +174,7 @@ rather than by Node's detection of what its syntax looks like.
 ## Checking it
 
 ```powershell
-node --test
+node --test test/issues.test.mjs
 ```
 
 Node's own runner, no dependency. The tests hold the manifest to every rule in
@@ -122,6 +182,11 @@ Atlas's loader — written out here rather than imported, because a plugin that
 tested itself against one build of Atlas would be a plugin whose tests say nothing
 about any other — and they exercise the row shaping, the pull-request drop, the
 paging pass-through and the strict reading of an item.
+
+They also read a row back the way Atlas reads one: against the columns this
+manifest declares, in the kinds it declares them, with a choice held to its own
+values. That check names no field, so a column renamed in the manifest and not in
+the code fails here rather than on somebody's screen.
 
 **What they cannot prove is that it installs and runs.** That takes a person, a
 running Atlas, a GitHub connection and a token.
@@ -131,16 +196,20 @@ running Atlas, a GitHub connection and a token.
 This plugin is written against three points in Atlas's own arc, and each commit
 loads on the Atlas of its own day.
 
-- **Commit A — this one.** The manifest, the declared call, and the screen with
-  **plain column and filter names**. It predates declared surfaces on purpose:
-  until `Hosts C3b` lands, Atlas checks a screen's columns against the fields an
-  issue carries and its filters against the filters it offers, so a column written
-  as a declaration — with a heading, a kind, an address template — refuses the
-  whole plugin. It is not a mistake and it is not unfinished; it is what loads.
-- **Commit B** — the same call, with the screen's columns and filters rewritten as
-  declarations, and the address template on the number column.
+- **Commit A.** The manifest, the declared call, and the screen with **plain
+  column and filter names**. It predated declared surfaces on purpose: before
+  `Hosts C3b`, Atlas checked a screen's columns against the fields an issue
+  carries and its filters against the filters it offers, so a column written as a
+  declaration would have refused the whole plugin. It was not a mistake and it was
+  not unfinished; it was what loaded. **It does not load on `Hosts C3b` or after**
+  — the refusal says a column declares a name, a heading and a kind, and to update
+  the plugin to a version that does. That version is the next one.
+- **Commit B — this one.** The same call, with the screen's columns and filters
+  rewritten as declarations, the address template on the number column, and the
+  Labels field read as a line of text rather than as a list.
 - **Commit C** — one heading changed and nothing else, so that a changed manifest
   changing a screen can be watched.
 
 Updating from A to B is not refused, because nothing about reach changes: the
-call, its method, its path and its parameters are the same in all three.
+call, its method, its path and its parameters are the same in all three. Neither
+is B to C, for the same reason — a changed heading is not a changed reach.
