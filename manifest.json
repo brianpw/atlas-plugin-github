@@ -1,0 +1,29 @@
+{
+  "plugin": "issues",
+  "named": "GitHub issues",
+  "runs": "issues.mjs",
+  "host": "github",
+  "calls": [
+    {
+      "call": "readIssues",
+      "method": "GET",
+      "path": "/repos/{owner}/{repository}/issues",
+      "fills": ["state", "labels", "per_page"],
+      "label": "Read a repository's issues"
+    }
+  ],
+  "contributes": {
+    "screens": [
+      {
+        "screen": "issues",
+        "named": "Issues",
+        "under": "repository",
+        "rows": "listIssues",
+        "holds": [
+          { "component": "filterBar", "filters": ["state", "labels"] },
+          { "component": "rowList", "columns": ["number", "title", "state", "labels"] }
+        ]
+      }
+    ]
+  }
+}
